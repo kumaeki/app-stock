@@ -1,27 +1,17 @@
+import json
 import os
 
+import plotly
 import yfinance as yf
 from flask import Flask, redirect, render_template, request, send_from_directory, url_for
+from plotly.graph_objs import Scatter
 from prophet import Prophet
 
 app = Flask(__name__)
 
 
-@app.route("/")
+@app.route("/", methods=["POST", "GET"])
 def index():
-    print("Request for index page received")
-    return render_template("index.html")
-
-
-@app.route("/favicon.ico")
-def favicon():
-    return send_from_directory(
-        os.path.join(app.root_path, "static"), "favicon.ico", mimetype="image/vnd.microsoft.icon"
-    )
-
-
-@app.route("/hello", methods=["POST"])
-def hello():
     name = request.form.get("name")
 
     if name:
@@ -32,17 +22,30 @@ def hello():
         m = Prophet()
         m.fit(df_new)
         future = m.make_future_dataframe(periods=30)
-        forecast = m.predict(future)
-
-        print(forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail())
-
-        fig1 = m.plot(forecast)
-        fig2 = m.plot_components(forecast)
-
-        return render_template("hello.html", name=name)
+        forecast = m.predict(future)[["ds", "yhat"]]
+        print(forecast)
+        graphs = (
+            {
+                "data": [Scatter(x=forecast["ds"], y=forecast["yhat"])],
+                "layout": {
+                    "title": "Predicted stock price",
+                    "yaxis": {"title": "date"},
+                    "xaxis": {"title": "stock prick"},
+                },
+            },
+        )
+        graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
+        return render_template("index.html", graphJSON=graphJSON)
     else:
         print("Request for hello page received with no name or blank name -- redirecting")
-        return redirect(url_for("index"))
+        return render_template("index.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, "static"), "favicon.ico", mimetype="image/vnd.microsoft.icon"
+    )
 
 
 if __name__ == "__main__":
