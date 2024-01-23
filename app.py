@@ -1,6 +1,8 @@
 import os
+
 import yfinance as yf
 from flask import Flask, redirect, render_template, request, send_from_directory, url_for
+from prophet import Prophet
 
 app = Flask(__name__)
 
@@ -25,7 +27,18 @@ def hello():
     if name:
         data = yf.download(name, start="2023-01-01", end="2024-01-01")
         print("Request for hello page received with name=%s" % name)
-        print(data)
+        df_new = data.reset_index()
+        df_new = df_new[["Date", "Close"]].rename(columns={"Date": "ds", "Close": "y"})
+        m = Prophet()
+        m.fit(df_new)
+        future = m.make_future_dataframe(periods=30)
+        forecast = m.predict(future)
+
+        print(forecast[["ds", "yhat", "yhat_lower", "yhat_upper"]].tail())
+
+        fig1 = m.plot(forecast)
+        fig2 = m.plot_components(forecast)
+
         return render_template("hello.html", name=name)
     else:
         print("Request for hello page received with no name or blank name -- redirecting")
