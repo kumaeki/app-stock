@@ -1,3 +1,16 @@
 {
-  "cSpell.words": ["dataframe", "Kuma", "Plotly", "xaxis", "yaxis", "yfinance", "yhat"]
+  "cSpell.words": [
+    "dataframe",
+    "Kuma",
+    "openai",
+    "Plotly",
+    "xaxis",
+    "yaxis",
+    "yfinance",
+    "yhat"
+  ],
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "python.formatting.provider": "none"
 }
