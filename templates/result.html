@@ -7,65 +7,62 @@
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <html>
-
-<body>
-  <main>
-    <div class="px-4 py-3 my-2 text-center">
-      <h1 class="display-6 fw-bold text-primary">Welcome to KumaStock</h1>
-    </div>
-    <form method="post" action="{{url_for('index')}}">
-      <div class="col-md-6 mx-auto text-center">
-
-        <div class="row my-2">
-          <div class="col-sm-2">
-            <label for="name" class="form-label fw-bold fs-5">Stock Code:</label>
+  <body>
+    <main>
+      <div class="px-4 py-3 my-2 text-center">
+        <h1 class="display-6 fw-bold text-primary">Welcome to KumaStock</h1>
+      </div>
+      <form method="post" action="{{url_for('index')}}">
+        <div class="col-md-6 mx-auto text-center">
+          <div class="row my-2">
+            <div class="col-sm-3">
+              <label for="code" class="form-label fw-bold fs-5">Stock Code:</label>
+            </div>
+            <div class="col-sm-3">{{code}}<input type="hidden" id="code" name="code" value="{{code}}" /></div>
+            <div class="col-sm-3">
+              <label for="horizon" class="form-label fw-bold fs-5">forecast horizon(days)</label>
+            </div>
+            <div class="col-sm-3">
+              {{horizon}}<input type="hidden" id="horizon" name="horizon" value="{{horizon}}" />
+            </div>
           </div>
-          <div class="col-sm-4">{{name}}<input type="hidden" id="name" name="name" value="{{name}}" /></div>
-          <div class="col-sm-2">
-            <label for="name" class="form-label fw-bold fs-5">forecast horizon(days)</label>
+          <div class="row my-2">
+            <div class="col-sm-3">
+              <label for="start_date" class="form-label fw-bold fs-5">Start Date:</label>
+            </div>
+            <div class="col-sm-3">
+              {{start_date}} <input type="hidden" id="start_date" name="start_date" value="{{start_date}}" />
+            </div>
+            <div class="col-sm-3">
+              <label for="end_date" class="form-label fw-bold fs-5">End Date:</label>
+            </div>
+            <div class="col-sm-3">
+              {{end_date}}<input type="hidden" id="end_date" name="end_date" value="{{end_date}}" />
+            </div>
           </div>
-          <div class="col-sm-4">
-            {{horizon}}<input type="hidden" id="horizon" name="horizon" value="{{horizon}}" />
+
+          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
+            <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Back to search</button>
           </div>
         </div>
-        <div class="row my-2">
-          <div class="col-sm-2">
-            <label for="start_date" class="form-label fw-bold fs-5">Start Date:</label>
+      </form>
+      <div class="container mt-5">
+        <div class="row justify-content-center">
+          {% for id in ids %}
+          <div class="col-md-6">
+            <div id="{{id}}" class="px-4" style="height: 400px"></div>
           </div>
-          <div class="col-sm-4">
-            {{start_date}} <input type="hidden" id="start_date" name="start_date" value="{{start_date}}" />
-          </div>
-          <div class="col-sm-2">
-            <label for="end_date" class="form-label fw-bold fs-5">End Date:</label>
-          </div>
-          <div class="col-sm-4">
-            {{end_date}}<input type="hidden" id="end_date" name="end_date" value="{{end_date}}" />
-          </div>
-        </div>
-
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
-          <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Back to search</button>
+          {% endfor %}
         </div>
       </div>
-    </form>
-    <div class="container mt-5">
-      <div class="row justify-content-center">
-        {% for id in ids %}
-        <div class="col-md-6">
-          <div id="{{id}}" class="px-4" style="height: 400px"></div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </main>
+    </main>
 
-  <script>
-    const ids = {{ ids | safe}};
-    const graphs = {{ graphJSON | safe}};
-    for (let i in graphs) {
-      Plotly.plot(ids[i], graphs[i].data, graphs[i].layout);
-    }
-  </script>
-</body>
-
+    <script>
+      const ids = {{ ids | safe}};
+      const graphs = {{ graphJSON | safe}};
+      for (let i in graphs) {
+        Plotly.plot(ids[i], graphs[i].data, graphs[i].layout);
+      }
+    </script>
+  </body>
 </html>

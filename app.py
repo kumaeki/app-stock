@@ -2,41 +2,40 @@ import json
 import os
 from datetime import datetime, timedelta
 
-import pandas as pd
 import plotly
-import yfinance as yf
 from flask import Flask, render_template, request, send_from_directory
 from plotly.graph_objs import Scatter
-from prophet import Prophet
-from prophet.diagnostics import cross_validation, performance_metrics
+
+from scripts.fetch_data import fetch_data
+from scripts.forecast import forecast
+from scripts.graphs import generate_graphs_json
 
 app = Flask(__name__)
 
 
 @app.route("/", methods=["POST", "GET"])
 def index():
-    name = request.form.get("name")
-    if name == None:
-        name = ""
+    code = request.form.get("code")
+    if code == None:
+        code = ""
 
     horizon = request.form.get("horizon")
     if horizon == None:
         horizon = 30
 
-    date_pre_1m = (datetime.now() - timedelta(days=300)).strftime("%Y-%m-%d")
-    date_pre_1d = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    date_pre_1y = (datetime.now() - timedelta(days=300)).strftime("%Y-%m-%d")
     start_date = request.form.get("start_date")
     if start_date == None:
-        start_date = date_pre_1m
+        start_date = date_pre_1y
 
+    date_pre_1d = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     end_date = request.form.get("end_date")
     if end_date == None:
         end_date = date_pre_1d
 
-    print(f"name = {name}, start_date = {start_date}, end_date = {end_date}")
     return render_template(
         "index.html",
-        name=name,
+        code=code,
         horizon=horizon,
         start_date=start_date,
         end_date=end_date,
@@ -46,128 +45,52 @@ def index():
 
 @app.route("/result", methods=["POST"])
 def result():
-    name = request.form.get("name")
+
+    code = request.form.get("code")
     horizon = request.form.get("horizon")
     start_date = request.form.get("start_date")
     end_date = request.form.get("end_date")
-    if name:
-        data = yf.download(name, start=start_date, end=end_date)
-        print("Request for hello page received with name=%s" % name)
-        df_new = data.reset_index()
-        df_new = df_new[["Date", "Close"]].rename(columns={"Date": "ds", "Close": "y"})
-        m = Prophet()
-        m.fit(df_new)
-        future = m.make_future_dataframe(periods=int(horizon), include_history=False)
-        forecast = m.predict(future)[["ds", "yhat"]]
 
-        period = (
-            abs(
-                datetime.strptime(start_date, "%Y-%m-%d")
-                - datetime.strptime(end_date, "%Y-%m-%d")
+    if code:
+
+        print("Request for index page received with code = %s" % code)
+
+        # fetch data
+        data = fetch_data(code, start_date, end_date)
+
+        # if there is no data for the stock code,back to index.html
+        if data.empty:
+            return render_template(
+                "index.html",
+                code=code,
+                horizon=horizon,
+                start_date=start_date,
+                end_date=end_date,
+                previous_day=(datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d"),
+                error=True,
             )
-            // 5
-        )
-        df_cv = cross_validation(m, horizon=f"{period} days")
-        cutoff_list = df_cv["cutoff"].unique().tolist()
 
-        df_cv_1 = df_cv[df_cv["cutoff"] == cutoff_list[0]]
+        # preprocess the stock price data
+        data = data.reset_index()
+        df_new = data[["Date", "Close"]].rename(columns={"Date": "ds", "Close": "y"})
 
-        df_cv_2 = df_cv[df_cv["cutoff"] == cutoff_list[1]]
-        df_p = performance_metrics(df_cv)
+        # forecast the future price
+        df_forecast, df_cv_1, df_cv_2, df_p = forecast(df_new, horizon, start_date, end_date)
 
-        df_p["horizon"] = df_p["horizon"].dt.days
-
-        graphs = [
-            {
-                "data": [
-                    Scatter(
-                        x=forecast["ds"],
-                        y=forecast["yhat"],
-                        name="Predicted",
-                        marker=dict(color="blue"),
-                    ),
-                    Scatter(
-                        x=df_new["ds"],
-                        y=df_new["y"],
-                        name="Actual",
-                        marker=dict(color="red"),
-                    ),
-                ],
-                "layout": {
-                    "title": "stock price",
-                    "xaxis": {"title": "date"},
-                    "yaxis": {"title": "stock prick"},
-                },
-            },
-            {
-                "data": [
-                    Scatter(x=df_p["horizon"], y=df_p["mape"]),
-                ],
-                "layout": {
-                    "title": "mean absolute percent error(mape) vs forecast horizon(days)",
-                    "xaxis": {"title": "forecast horizon(days)"},
-                    "yaxis": {"title": "mape"},
-                },
-            },
-            {
-                "data": [
-                    Scatter(
-                        x=df_cv_1["ds"],
-                        y=df_cv_1["yhat"],
-                        name="Predicted",
-                        marker=dict(color="blue"),
-                    ),
-                    Scatter(
-                        x=df_cv_1["ds"],
-                        y=df_cv_1["y"],
-                        name="Actual",
-                        marker=dict(color="red"),
-                    ),
-                ],
-                "layout": {
-                    "title": "Predicted/Actual stock price # 1",
-                    "xaxis": {"title": "date"},
-                    "yaxis": {"title": "stock prick"},
-                },
-            },
-            {
-                "data": [
-                    Scatter(
-                        x=df_cv_2["ds"],
-                        y=df_cv_2["yhat"],
-                        name="Predicted",
-                        marker=dict(color="blue"),
-                    ),
-                    Scatter(
-                        x=df_cv_2["ds"],
-                        y=df_cv_2["y"],
-                        name="Actual",
-                        marker=dict(color="red"),
-                    ),
-                ],
-                "layout": {
-                    "title": "Predicted/Actual stock price # 2",
-                    "xaxis": {"title": "date"},
-                    "yaxis": {"title": "stock prick"},
-                },
-            },
-        ]
-        ids = ["graph-{}".format(i) for i, _ in enumerate(graphs)]
-        graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
+        # generate the ids and graphJSON show in result.html
+        ids, graphJSON = generate_graphs_json(df_new, df_forecast, df_cv_1, df_cv_2, df_p)
 
         return render_template(
             "result.html",
             ids=ids,
             graphJSON=graphJSON,
             horizon=horizon,
-            name=name,
+            code=code,
             start_date=start_date,
             end_date=end_date,
         )
     else:
-        return render_template(
-            "result.html", name=name, start_date=start_date, end_date=end_date
-        )
+        return render_template("index.html", code=code, start_date=start_date, end_date=end_date)
 
 
 @app.route("/favicon.ico")

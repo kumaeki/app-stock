@@ -7,88 +7,115 @@
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <html>
+  <body>
+    <main>
+      <div class="px-4 py-3 my-2 text-center">
+        <h1 class="display-6 fw-bold text-primary">Welcome to KumaStock</h1>
+      </div>
+      <form method="post" action="{{url_for('result')}}">
+        <div class="col-md-6 mx-auto text-center">
+          {% if error == True %}
+          <label class="form-label fw-bold fs-5 text-danger"
+            >Stock Code [ {{code}} ] did not exists. Please entry a real Code</label
+          >
+          {% endif %}
+          <div class="row my-2">
+            <div class="col-sm-3">
+              <label for="code" class="form-label fw-bold fs-5">Stock Code:</label>
+            </div>
+            <div class="col-sm-3">
+              <input type="text" class="form-control" id="code" name="code" style="max-width: 256px" value="{{code}}" />
+            </div>
+            <div class="col-sm-3">
+              <label for="name" class="form-label fw-bold fs-5">forecast horizon(days)</label>
+            </div>
+            <div class="col-sm-3">
+              <input
+                type="text"
+                class="form-control"
+                id="horizon"
+                name="horizon"
+                style="max-width: 256px"
+                value="{{horizon}}"
+              />
+            </div>
+          </div>
 
-<body>
-  <main>
-    <div class="px-4 py-3 my-2 text-center">
-      <h1 class="display-6 fw-bold text-primary">Welcome to KumaStock</h1>
-    </div>
-    <form method="post" action="{{url_for('result')}}">
-      <div class="col-md-6 mx-auto text-center">
-        <div class="row my-2">
-          <div class="col-sm-2">
-            <label for="name" class="form-label fw-bold fs-5">Stock Code:</label>
+          <div class="row my-2">
+            <div class="col-sm-3">
+              <label for="start_date" class="form-label fw-bold fs-5">Start Date:</label>
+            </div>
+            <div class="col-sm-3">
+              <input
+                type="date"
+                class="form-control"
+                id="start_date"
+                name="start_date"
+                style="max-width: 256px"
+                placeholder="start_date"
+                min="2009-01-01"
+                max="{{ previous_day }}"
+                value="{{ start_date }}"
+              />
+            </div>
+            <div class="col-sm-3">
+              <label for="end_date" class="form-label fw-bold fs-5">End Date:</label>
+            </div>
+            <div class="col-sm-3">
+              <input
+                type="date"
+                class="form-control"
+                id="end_date"
+                name="end_date"
+                style="max-width: 256px"
+                placeholder="end_date"
+                min="2009-01-01"
+                max="{{ previous_day }}"
+                value="{{ end_date }}"
+              />
+            </div>
           </div>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" id="name" name="name" style="max-width: 256px" value="{{name}}" />
-          </div>
-          <div class="col-sm-2">
-            <label for="name" class="form-label fw-bold fs-5">forecast horizon(days)</label>
-          </div>
-          <div class="col-sm-4">
-            <input type="text" class="form-control" id="horizon" name="horizon" style="max-width: 256px"
-              value="{{horizon}}" />
+
+          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
+            <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Search</button>
           </div>
         </div>
-
-        <div class="row my-2">
-          <div class="col-sm-2">
-            <label for="start_date" class="form-label fw-bold fs-5">Start Date:</label>
+      </form>
+      <div class="container mt-5">
+        <div class="row justify-content-center">
+          <div class="col-md-12">
+            <div id="stockChart" class="px-4" style="height: 600px"></div>
           </div>
-          <div class="col-sm-4">
-            <input type="date" class="form-control" id="start_date" name="start_date" style="max-width: 256px"
-              placeholder="start_date" min="2009-01-01" max="{{ previous_day }}" value="{{ start_date }}" />
-          </div>
-          <div class="col-sm-2">
-            <label for="end_date" class="form-label fw-bold fs-5">End Date:</label>
-          </div>
-          <div class="col-sm-4">
-            <input type="date" class="form-control" id="end_date" name="end_date" style="max-width: 256px"
-              placeholder="end_date" min="2009-01-01" max="{{ previous_day }}" value="{{ end_date }}" />
-          </div>
-        </div>
-
-        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center my-2">
-          <button type="submit" class="btn btn-primary btn-lg px-4 gap-3">Search</button>
         </div>
       </div>
-    </form>
-    <div class="container mt-5">
-      <div class="row justify-content-center">
-        <div class="col-md-12">
-          <div id="stockChart" class="px-4" style="height: 600px"></div>
-        </div>
-      </div>
-    </div>
-  </main>
-</body>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const nameInput = document.getElementById("name");
-    const horizonInput = document.getElementById("horizon");
-    const startDateInput = document.getElementById("start_date");
-    const endDateInput = document.getElementById("end_date");
-    const searchButton = document.querySelector('button[type="submit"]');
+    </main>
+  </body>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const codeInput = document.getElementById("code");
+      const horizonInput = document.getElementById("horizon");
+      const startDateInput = document.getElementById("start_date");
+      const endDateInput = document.getElementById("end_date");
+      const searchButton = document.querySelector('button[type="submit"]');
 
-    function validateInputs() {
-      const name = nameInput.value.trim();
-      const horizon = horizonInput.value
-      const startDate = startDateInput.value;
-      const endDate = endDateInput.value;
-      const allInputsFilled = name && startDate && endDate;
-      const validDateRange = startDate <= endDate;
-      const isHorizonValid = !isNaN(horizon) && Number(horizon) > 0;
+      function validateInputs() {
+        const code = codeInput.value.trim();
+        const horizon = horizonInput.value;
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const allInputsFilled = code && startDate && endDate;
+        const validDateRange = startDate <= endDate;
+        const isHorizonValid = !isNaN(horizon) && Number(horizon) > 0;
 
-      searchButton.disabled = !(allInputsFilled && validDateRange && isHorizonValid);
-    }
+        searchButton.disabled = !(allInputsFilled && validDateRange && isHorizonValid);
+      }
 
-    nameInput.addEventListener("input", validateInputs);
-    horizonInput.addEventListener("input", validateInputs);
-    startDateInput.addEventListener("input", validateInputs);
-    endDateInput.addEventListener("input", validateInputs);
+      codeInput.addEventListener("input", validateInputs);
+      horizonInput.addEventListener("input", validateInputs);
+      startDateInput.addEventListener("input", validateInputs);
+      endDateInput.addEventListener("input", validateInputs);
 
-    validateInputs();
-  });
-</script>
-
+      validateInputs();
+    });
+  </script>
 </html>
