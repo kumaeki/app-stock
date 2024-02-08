@@ -23,6 +23,7 @@ static (bootstrap css/js files and image files)
 templates
     index.html (input the stock information)
     result.html (show the result)
+.deployment (used by azure)
 .gitignore
 app.py (the main python file)
 README.md
