@@ -1,10 +1,7 @@
-import json
 import os
 from datetime import datetime, timedelta
 
-import plotly
 from flask import Flask, render_template, request, send_from_directory
-from plotly.graph_objs import Scatter
 
 from scripts.fetch_data import fetch_data
 from scripts.forecast import forecast
@@ -52,9 +49,6 @@ def result():
     end_date = request.form.get("end_date")
 
     if code:
-
-        print("Request for index page received with code = %s" % code)
-
         # fetch data
         data = fetch_data(code, start_date, end_date)
 
